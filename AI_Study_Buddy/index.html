@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Study Buddy</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #eef2f7;
+      color: #182033;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .app {
+      width: min(900px, 100%);
+      height: min(760px, 92vh);
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 15px 45px rgba(0,0,0,.12);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      padding: 20px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    h1 { margin: 0; font-size: 20px; }
+    .sub { color: #6b7280; font-size: 13px; margin-top: 4px; }
+    button { cursor: pointer; }
+    .clear {
+      background: white;
+      border: 1px solid #ddd;
+      padding: 8px 12px;
+      border-radius: 9px;
+    }
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .msg {
+      max-width: 78%;
+      padding: 12px 15px;
+      border-radius: 16px;
+      line-height: 1.5;
+      font-size: 14px;
+      white-space: pre-wrap;
+    }
+    .bot {
+      background: #eef2ff;
+      align-self: flex-start;
+      border-bottom-left-radius: 5px;
+    }
+    .user {
+      background: #4f46e5;
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 5px;
+    }
+    .suggestions {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 0 20px 14px;
+    }
+    .suggestion {
+      white-space: nowrap;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 99px;
+      padding: 8px 12px;
+    }
+    .form {
+      display: flex;
+      gap: 10px;
+      padding: 15px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .form input {
+      flex: 1;
+      padding: 13px;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      outline: 0;
+      font-size: 14px;
+    }
+    .send {
+      background: #4f46e5;
+      color: white;
+      border: 0;
+      border-radius: 12px;
+      padding: 0 20px;
+      font-weight: bold;
+    }
+    @media (max-width: 600px) {
+      body { padding: 0; }
+      .app { height: 100vh; border-radius: 0; }
+      .msg { max-width: 88%; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>🤖 AI Study Buddy</h1>
+        <div class="sub">Simple rule-based AI chatbot</div>
+      </div>
+      <button class="clear" id="clearButton">Clear</button>
+    </header>
+
+    <div class="chat" id="chat" aria-live="polite"></div>
+
+    <div class="suggestions">
+      <button class="suggestion">What is AI?</button>
+      <button class="suggestion">Explain machine learning</button>
+      <button class="suggestion">What is NLP?</button>
+      <button class="suggestion">What is generative AI?</button>
+    </div>
+
+    <form class="form" id="chatForm">
+      <input
+        id="messageInput"
+        type="text"
+        placeholder="Ask something about AI..."
+        autocomplete="off"
+      >
+      <button class="send" type="submit">Send</button>
+    </form>
+  </div>
+
+<script>
+const chat = document.getElementById("chat");
+const input = document.getElementById("messageInput");
+const form = document.getElementById("chatForm");
+const clearButton = document.getElementById("clearButton");
+
+/*
+  Rule-based knowledge base.
+  Each intent contains keywords and a response.
+*/
+const intents = [
+  {
+    keywords: ["hello", "hi", "hey", "good morning", "good evening"],
+    response:
+      "Hi! I'm AI Study Buddy. Ask me about AI, machine learning, NLP, computer vision, generative AI, or responsible AI."
+  },
+  {
+    keywords: ["what is ai", "define ai", "artificial intelligence"],
+    response:
+      "Artificial Intelligence (AI) is the field of making computers perform tasks that normally require human intelligence, such as learning, reasoning, understanding language, and recognizing images."
+  },
+  {
+    keywords: ["machine learning", "what is ml", "define ml"],
+    response:
+      "Machine Learning is a part of AI where computers learn patterns from data and use those patterns to make predictions or decisions. Common types are supervised, unsupervised, and reinforcement learning."
+  },
+  {
+    keywords: ["supervised learning", "classification", "regression"],
+    response:
+      "Supervised learning uses labelled data. Classification predicts categories, while regression predicts numerical values."
+  },
+  {
+    keywords: ["unsupervised", "clustering"],
+    response:
+      "Unsupervised learning works with data without labels. Clustering groups similar data points together."
+  },
+  {
+    keywords: ["nlp", "natural language", "language processing"],
+    response:
+      "Natural Language Processing helps computers work with human language. Examples include translation, sentiment analysis, speech recognition, and chatbots."
+  },
+  {
+    keywords: ["computer vision", "image recognition", "object detection", "ocr"],
+    response:
+      "Computer Vision helps computers understand images and video. Examples include image classification, object detection, OCR, and face detection."
+  },
+  {
+    keywords: ["generative ai", "genai", "large language model", "llm", "chatgpt"],
+    response:
+      "Generative AI creates new content such as text, images, audio, or code. Large Language Models are generative AI models designed for understanding and generating text."
+  },
+  {
+    keywords: ["responsible ai", "ai ethics", "fairness", "privacy"],
+    response:
+      "Responsible AI focuses on fairness, reliability and safety, privacy and security, inclusiveness, transparency, and accountability."
+  },
+  {
+    keywords: ["help", "what can you do", "who are you"],
+    response:
+      "I'm a simple browser-based AI Study Buddy. I can explain basic AI concepts and answer common study questions without an API key."
+  },
+  {
+    keywords: ["thanks", "thank you"],
+    response: "You're welcome! Keep learning. 😄"
+  },
+  {
+    keywords: ["bye", "goodbye"],
+    response: "Goodbye! Good luck with your studies. 👋"
+  }
+];
+
+function normalize(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/*
+  Finds the best matching intent.
+  Longer matching phrases receive a higher score.
+*/
+function getBotResponse(message) {
+  const text = normalize(message);
+  let bestResponse = null;
+  let bestScore = 0;
+
+  for (const intent of intents) {
+    let score = 0;
+
+    for (const keyword of intent.keywords) {
+      const normalizedKeyword = normalize(keyword);
+
+      if (text.includes(normalizedKeyword)) {
+        score += normalizedKeyword.split(" ").length;
+      }
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestResponse = intent.response;
+    }
+  }
+
+  if (bestResponse) {
+    return bestResponse;
+  }
+
+  if (text.includes("time")) {
+    return "The current time is " +
+      new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+      }) + ".";
+  }
+
+  return "I'm not sure about that yet. Try asking about AI, machine learning, NLP, computer vision, generative AI, or responsible AI.";
+}
+
+function addMessage(text, sender) {
+  const message = document.createElement("div");
+  message.className = "msg " + sender;
+  message.textContent = text;
+  chat.appendChild(message);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function sendMessage(text) {
+  const cleanText = text.trim();
+
+  if (!cleanText) {
+    return;
+  }
+
+  addMessage(cleanText, "user");
+  input.value = "";
+
+  const typing = document.createElement("div");
+  typing.className = "msg bot";
+  typing.textContent = "Typing...";
+  chat.appendChild(typing);
+  chat.scrollTop = chat.scrollHeight;
+
+  setTimeout(() => {
+    typing.remove();
+    addMessage(getBotResponse(cleanText), "bot");
+  }, 300);
+}
+
+form.addEventListener("submit", function(event) {
+  event.preventDefault();
+  sendMessage(input.value);
+});
+
+document.querySelectorAll(".suggestion").forEach(function(button) {
+  button.addEventListener("click", function() {
+    sendMessage(button.textContent);
+  });
+});
+
+clearButton.addEventListener("click", function() {
+  chat.innerHTML = "";
+  addMessage(
+    "Hello! I'm AI Study Buddy. What would you like to learn?",
+    "bot"
+  );
+  input.focus();
+});
+
+addMessage(
+  "Hello! I'm AI Study Buddy. Ask me a question about AI and I'll help you learn.",
+  "bot"
+);
+</script>
+</body>
+</html>
